@@ -5,7 +5,7 @@
 **Service**: SITE-M4-Dashboard-Service  
 **Version**: 1.0.0  
 **Type**: Read-Only Electoral Dashboard API  
-**Architecture**: In-Memory Mock Data (No Database)  
+**Architecture**: In-Memory Mock Data (No Database)
 
 The SITE Dashboard Service provides role-based mock data for the Electoral System (Sistema Electoral Transparente Electrónico v2.1). Each user role receives a customized dashboard view containing only the information relevant to their electoral responsibilities.
 
@@ -24,7 +24,8 @@ http://localhost:8082/api/v1
 **Method**: HTTP Header-based Role Specification  
 **Header Name**: `X-Mock-Role`  
 **Required**: Yes  
-**Valid Roles**: 
+**Valid Roles**:
+
 - `CANDIDATO` - Candidate Dashboard
 - `TESTIGO` - Electoral Witness Dashboard
 - `AUDITOR` - Audit Dashboard
@@ -43,10 +44,10 @@ http://localhost:8082/api/v1
 
 #### Request Headers
 
-| Header | Value | Required | Description |
-|--------|-------|----------|-------------|
-| `X-Mock-Role` | String | **Yes** | The role of the user (see valid roles above) |
-| `Content-Type` | `application/json` | No | Content type (implied) |
+| Header         | Value              | Required | Description                                  |
+| -------------- | ------------------ | -------- | -------------------------------------------- |
+| `X-Mock-Role`  | String             | **Yes**  | The role of the user (see valid roles above) |
+| `Content-Type` | `application/json` | No       | Content type (implied)                       |
 
 #### Request Example
 
@@ -65,28 +66,31 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `200 OK`
 
 **Response Body**:
+
 ```json
 {
-  "votosPropiosPorMesa": {
-    "Mesa 1 - Puesto Central": 450,
-    "Mesa 2 - Puesto Sur": 320,
-    "Mesa 3 - Puesto Norte": 510,
-    "Mesa 4 - Puesto Occidente": 280,
-    "Mesa 5 - Puesto Oriente": 395
-  },
-  "porcentajeMesasReportadas": 85.5,
-  "estadoCandidatura": "ACEPTADA - ACTIVA",
-  "alertasReclamacionesActivas": false
+    "votosPropiosPorMesa": {
+        "Mesa 1 - Puesto Central": 450,
+        "Mesa 2 - Puesto Sur": 320,
+        "Mesa 3 - Puesto Norte": 510,
+        "Mesa 4 - Puesto Occidente": 280,
+        "Mesa 5 - Puesto Oriente": 395
+    },
+    "porcentajeMesasReportadas": 85.5,
+    "estadoCandidatura": "ACEPTADA - ACTIVA",
+    "alertasReclamacionesActivas": false
 }
 ```
 
 **Field Descriptions**:
+
 - `votosPropiosPorMesa` (Map<String, Integer>): Vote count per polling station
 - `porcentajeMesasReportadas` (Double): Percentage of stations that have reported (0-100)
 - `estadoCandidatura` (String): Candidacy status (e.g., "ACEPTADA - ACTIVA", "SUSPENDIDA", "RECHAZADA")
 - `alertasReclamacionesActivas` (Boolean): Active complaints/challenges flag
 
 **Use Cases**:
+
 - Monitor vote distribution across polling stations
 - Track reporting coverage percentage
 - Check candidacy status and active complaints
@@ -98,37 +102,40 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `200 OK`
 
 **Response Body**:
+
 ```json
 {
-  "mesasBajoCobertura": [
-    {
-      "mesa": "Mesa 14",
-      "estado": "ESCRUTINIO FINALIZADO"
-    },
-    {
-      "mesa": "Mesa 15",
-      "estado": "ACTA GENERADA"
-    },
-    {
-      "mesa": "Mesa 16",
-      "estado": "ACTA FIRMADA"
-    },
-    {
-      "mesa": "Mesa 17",
-      "estado": "ESCRUTINIO FINALIZADO"
-    }
-  ],
-  "conteoVotosPartido": 1450
+    "mesasBajoCobertura": [
+        {
+            "mesa": "Mesa 14",
+            "estado": "ESCRUTINIO FINALIZADO"
+        },
+        {
+            "mesa": "Mesa 15",
+            "estado": "ACTA GENERADA"
+        },
+        {
+            "mesa": "Mesa 16",
+            "estado": "ACTA FIRMADA"
+        },
+        {
+            "mesa": "Mesa 17",
+            "estado": "ESCRUTINIO FINALIZADO"
+        }
+    ],
+    "conteoVotosPartido": 1450
 }
 ```
 
 **Field Descriptions**:
+
 - `mesasBajoCobertura` (List<MesaEstado>): Polling stations under witness coverage
-  - `mesa` (String): Polling station ID
-  - `estado` (String): Current status of the station (e.g., "ESCRUTINIO FINALIZADO", "ACTA GENERADA", "ACTA FIRMADA")
+    - `mesa` (String): Polling station ID
+    - `estado` (String): Current status of the station (e.g., "ESCRUTINIO FINALIZADO", "ACTA GENERADA", "ACTA FIRMADA")
 - `conteoVotosPartido` (Integer): Total vote count for the party
 
 **Use Cases**:
+
 - Monitor assigned polling stations status
 - Track party vote accumulation
 - Verify escrutinio (counting) completion
@@ -140,40 +147,43 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `200 OK`
 
 **Response Body**:
+
 ```json
 {
-  "actasDigitales": [
-    {
-      "id": "E14-9982",
-      "hashSha256": "a2b4c6d8e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
-      "estado": "FIRMADA_INMUTABLE"
-    },
-    {
-      "id": "E15-9983",
-      "hashSha256": "b3c5d7e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6",
-      "estado": "FIRMADA_INMUTABLE"
-    },
-    {
-      "id": "E16-9984",
-      "hashSha256": "c4d6e8f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7",
-      "estado": "EN_REVISION"
-    }
-  ],
-  "alertasFraudeFRA": [
-    "Alerta FRA-001: Anomalía estadística en Puesto Norte",
-    "Alerta FRA-002: Intento de acceso remoto no autorizado"
-  ]
+    "actasDigitales": [
+        {
+            "id": "E14-9982",
+            "hashSha256": "a2b4c6d8e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
+            "estado": "FIRMADA_INMUTABLE"
+        },
+        {
+            "id": "E15-9983",
+            "hashSha256": "b3c5d7e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6",
+            "estado": "FIRMADA_INMUTABLE"
+        },
+        {
+            "id": "E16-9984",
+            "hashSha256": "c4d6e8f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7",
+            "estado": "EN_REVISION"
+        }
+    ],
+    "alertasFraudeFRA": [
+        "Alerta FRA-001: Anomalía estadística en Puesto Norte",
+        "Alerta FRA-002: Intento de acceso remoto no autorizado"
+    ]
 }
 ```
 
 **Field Descriptions**:
+
 - `actasDigitales` (List<ActaDigital>): Digital election records
-  - `id` (String): Record identifier (format: E{station}-{number})
-  - `hashSha256` (String): SHA-256 cryptographic hash for integrity verification
-  - `estado` (String): Record state (e.g., "FIRMADA_INMUTABLE", "EN_REVISION", "RECHAZADA")
+    - `id` (String): Record identifier (format: E{station}-{number})
+    - `hashSha256` (String): SHA-256 cryptographic hash for integrity verification
+    - `estado` (String): Record state (e.g., "FIRMADA_INMUTABLE", "EN_REVISION", "RECHAZADA")
 - `alertasFraudeFRA` (List<String>): Fraud alerts from the Fraud Regression Auxiliary module
 
 **Use Cases**:
+
 - Verify digital record integrity using hashes
 - Monitor record status and revisions
 - Track fraud detection alerts
@@ -186,32 +196,35 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `200 OK`
 
 **Response Body**:
+
 ```json
 {
-  "resultadosConsolidados": {
-    "Candidato A": 5400000,
-    "Candidato B": 4900000,
-    "Candidato C": 3200000,
-    "Voto en Blanco": 250000,
-    "Voto Nulo": 150000
-  },
-  "mesasActasPendientes": 14,
-  "alertasInconsistencias": [
-    "GIDD-099: Discrepancia Doble Verdad en Mesa 4",
-    "GIDD-100: Diferencia de actas en Puesto Este",
-    "GIDD-101: Recuento de votos fuera de rango esperado"
-  ]
+    "resultadosConsolidados": {
+        "Candidato A": 5400000,
+        "Candidato B": 4900000,
+        "Candidato C": 3200000,
+        "Voto en Blanco": 250000,
+        "Voto Nulo": 150000
+    },
+    "mesasActasPendientes": 14,
+    "alertasInconsistencias": [
+        "GIDD-099: Discrepancia Doble Verdad en Mesa 4",
+        "GIDD-100: Diferencia de actas en Puesto Este",
+        "GIDD-101: Recuento de votos fuera de rango esperado"
+    ]
 }
 ```
 
 **Field Descriptions**:
+
 - `resultadosConsolidados` (Map<String, Integer>): National consolidated results
-  - Key: Candidate name or vote category (e.g., "Candidato A", "Voto en Blanco")
-  - Value: Total vote count
+    - Key: Candidate name or vote category (e.g., "Candidato A", "Voto en Blanco")
+    - Value: Total vote count
 - `mesasActasPendientes` (Integer): Number of polling stations with pending final acts
 - `alertasInconsistencias` (List<String>): Inconsistency alerts from GIDD system (Double Truth Verification Module)
 
 **Use Cases**:
+
 - Monitor national election results in real-time
 - Track pending report submissions
 - Identify data consistency issues
@@ -224,48 +237,51 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `200 OK`
 
 **Response Body**:
+
 ```json
 {
-  "mapaGeorreferenciado": [
-    {
-      "coordenadas": "4.6097, -74.0817",
-      "severidad": "CRITICA",
-      "incidente": "Intento sistemático de voto doble"
-    },
-    {
-      "coordenadas": "4.7110, -74.0721",
-      "severidad": "ALTA",
-      "incidente": "Acceso no autorizado a máquina de votación"
-    },
-    {
-      "coordenadas": "4.6726, -74.0481",
-      "severidad": "MEDIA",
-      "incidente": "Interferencia de señal de comunicación"
-    },
-    {
-      "coordenadas": "4.5527, -74.0359",
-      "severidad": "BAJA",
-      "incidente": "Retraso en reporte de actas"
-    }
-  ],
-  "alertasAnomaliasTrafico": 12,
-  "casosFraudeInvestigacion": [
-    "CASO-FRA-992: Suplantación biométrica detectada",
-    "CASO-FRA-993: Manipulación de actas en tránsito",
-    "CASO-FRA-994: Votante múltiple identificado"
-  ]
+    "mapaGeorreferenciado": [
+        {
+            "coordenadas": "4.6097, -74.0817",
+            "severidad": "CRITICA",
+            "incidente": "Intento sistemático de voto doble"
+        },
+        {
+            "coordenadas": "4.7110, -74.0721",
+            "severidad": "ALTA",
+            "incidente": "Acceso no autorizado a máquina de votación"
+        },
+        {
+            "coordenadas": "4.6726, -74.0481",
+            "severidad": "MEDIA",
+            "incidente": "Interferencia de señal de comunicación"
+        },
+        {
+            "coordenadas": "4.5527, -74.0359",
+            "severidad": "BAJA",
+            "incidente": "Retraso en reporte de actas"
+        }
+    ],
+    "alertasAnomaliasTrafico": 12,
+    "casosFraudeInvestigacion": [
+        "CASO-FRA-992: Suplantación biométrica detectada",
+        "CASO-FRA-993: Manipulación de actas en tránsito",
+        "CASO-FRA-994: Votante múltiple identificado"
+    ]
 }
 ```
 
 **Field Descriptions**:
+
 - `mapaGeorreferenciado` (List<IncidenteGeorreferenciado>): Geolocated incidents
-  - `coordenadas` (String): Geographic coordinates (format: "latitude, longitude")
-  - `severidad` (String): Incident severity level (CRITICA, ALTA, MEDIA, BAJA)
-  - `incidente` (String): Incident description
+    - `coordenadas` (String): Geographic coordinates (format: "latitude, longitude")
+    - `severidad` (String): Incident severity level (CRITICA, ALTA, MEDIA, BAJA)
+    - `incidente` (String): Incident description
 - `alertasAnomaliasTrafico` (Integer): Count of network traffic anomalies detected
 - `casosFraudeInvestigacion` (List<String>): Fraud cases under investigation
 
 **Use Cases**:
+
 - Visualize incident locations on electoral map
 - Prioritize investigations by severity
 - Track active fraud cases
@@ -280,17 +296,19 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `403 Forbidden`
 
 **Response Body**:
+
 ```json
 {
-  "timestamp": "2026-05-04T10:30:00",
-  "estado": 403,
-  "error": "ACCESO_DENEGADO",
-  "mensaje": "Encabezado X-Mock-Role requerido",
-  "ruta": "/api/v1/dashboard/resumen"
+    "timestamp": "2026-05-04T10:30:00",
+    "estado": 403,
+    "error": "ACCESO_DENEGADO",
+    "mensaje": "Encabezado X-Mock-Role requerido",
+    "ruta": "/api/v1/dashboard/resumen"
 }
 ```
 
 **Possible Messages**:
+
 - `"Encabezado X-Mock-Role requerido"` - Header is missing or empty
 - `"Rol inválido: {ROL_PROVIDED}. Roles válidos: CANDIDATO, TESTIGO, AUDITOR, DELEGADO_CNE, FISCALIA"` - Invalid role provided
 
@@ -314,13 +332,14 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 **Status Code**: `500 Internal Server Error`
 
 **Response Body**:
+
 ```json
 {
-  "timestamp": "2026-05-04T10:30:00",
-  "estado": 500,
-  "error": "ERROR_INTERNO",
-  "mensaje": "Se produjo un error interno en el servidor. Contacte al administrador.",
-  "ruta": "/api/v1/dashboard/resumen"
+    "timestamp": "2026-05-04T10:30:00",
+    "estado": 500,
+    "error": "ERROR_INTERNO",
+    "mensaje": "Se produjo un error interno en el servidor. Contacte al administrador.",
+    "ruta": "/api/v1/dashboard/resumen"
 }
 ```
 
@@ -337,18 +356,19 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 ```
 
 **Response**:
+
 ```json
 {
-  "votosPropiosPorMesa": {
-    "Mesa 1 - Puesto Central": 450,
-    "Mesa 2 - Puesto Sur": 320,
-    "Mesa 3 - Puesto Norte": 510,
-    "Mesa 4 - Puesto Occidente": 280,
-    "Mesa 5 - Puesto Oriente": 395
-  },
-  "porcentajeMesasReportadas": 85.5,
-  "estadoCandidatura": "ACEPTADA - ACTIVA",
-  "alertasReclamacionesActivas": false
+    "votosPropiosPorMesa": {
+        "Mesa 1 - Puesto Central": 450,
+        "Mesa 2 - Puesto Sur": 320,
+        "Mesa 3 - Puesto Norte": 510,
+        "Mesa 4 - Puesto Occidente": 280,
+        "Mesa 5 - Puesto Oriente": 395
+    },
+    "porcentajeMesasReportadas": 85.5,
+    "estadoCandidatura": "ACEPTADA - ACTIVA",
+    "alertasReclamacionesActivas": false
 }
 ```
 
@@ -400,34 +420,37 @@ curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
 
 ```javascript
 async function getDashboard(role) {
-  try {
-    const response = await fetch('http://localhost:8082/api/v1/dashboard/resumen', {
-      method: 'GET',
-      headers: {
-        'X-Mock-Role': role,
-        'Content-Type': 'application/json'
-      }
-    });
+    try {
+        const response = await fetch(
+            "http://localhost:8082/api/v1/dashboard/resumen",
+            {
+                method: "GET",
+                headers: {
+                    "X-Mock-Role": role,
+                    "Content-Type": "application/json",
+                },
+            },
+        );
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error(`Error ${response.status}:`, errorData.mensaje);
-      return null;
+        if (!response.ok) {
+            const errorData = await response.json();
+            console.error(`Error ${response.status}:`, errorData.mensaje);
+            return null;
+        }
+
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error("Request failed:", error);
     }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Request failed:', error);
-  }
 }
 
 // Usage
-const candidatoDashboard = await getDashboard('CANDIDATO');
-console.log('Candidato Dashboard:', candidatoDashboard);
+const candidatoDashboard = await getDashboard("CANDIDATO");
+console.log("Candidato Dashboard:", candidatoDashboard);
 
-const testivoDashboard = await getDashboard('TESTIGO');
-console.log('Testigo Dashboard:', testivoDashboard);
+const testivoDashboard = await getDashboard("TESTIGO");
+console.log("Testigo Dashboard:", testivoDashboard);
 ```
 
 ---
@@ -445,7 +468,7 @@ def get_dashboard(role):
         'X-Mock-Role': role,
         'Content-Type': 'application/json'
     }
-    
+
     try:
         response = requests.get(url, headers=headers)
         response.raise_for_status()

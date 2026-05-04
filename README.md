@@ -1,193 +1,374 @@
-# M4-SITE-Dashboards-Rol-Service
-
-# citizen-query-service
+# SITE-M4-Dashboard-Service
 
 ## 1. Descripción
 
-El Citizen Query Service es un microservicio de solo lectura encargado
-de exponer información pública del ciudadano, como el puesto de
-votación, estado del voto, si posee multas y si está obligado a votar.
+El SITE Dashboard Service es un microservicio de solo lectura encargado de exponer paneles de control personalizados para el Sistema Electoral Transparente Electrónico (SITE) v2.1.
 
-Forma parte del lado de consulta bajo el enfoque CQRS e implementa una
-capa de cache con Redis, incluyendo mecanismos de resiliencia para
-tolerar fallos del servicio de cache.
+El servicio atiende cinco tipos de usuarios con vistas diferenciadas:
+
+- **CANDIDATO**: Votos por mesa, cobertura de reportes, estado de candidatura
+- **TESTIGO**: Mesas bajo cobertura, conteo de votos del partido
+- **AUDITOR**: Actas digitales, alertas de fraude (módulo FRA)
+- **DELEGADO_CNE**: Resultados consolidados, inconsistencias detectadas
+- **FISCALIA**: Incidentes georreferenciados, casos de fraude en investigación
+
+Implementa una arquitectura **100% en memoria** (sin base de datos) con datos simulados para máxima velocidad y simplicidad.
 
 ---
 
 ## 2. Tecnologías
 
 - Java 21
-- Spring Boot 3.x
+- Spring Boot 3.5.13
 - Spring Web
-- Spring Data JPA
-- PostgreSQL
-- Redis
-- Resilience4j (Circuit Breaker)
-- Flyway
-- Springdoc OpenAPI (Swagger)
-- Maven
+- Spring Validation
+- Lombok (boilerplate reduction)
+- Springdoc OpenAPI 2.8.16 (Swagger)
+- Maven 3.x
+
+**Nota**: Sin dependencias de base de datos (PostgreSQL ❌), cache (Redis ❌), migraciones (Flyway ❌), ni circuit breaker.
 
 ---
 
 ## 3. Arquitectura
 
-Arquitectura por capas:
+Arquitectura por capas simplificada:
 
-- Controller: Exposición de endpoints REST
-- Service: Lógica de negocio y orquestación
-- Repository: Acceso a datos con JPA
-- Cache Adapter: Integración con Redis
-- Circuit Breaker: Manejo de fallos en cache
-- Mapper: Transformación de entidades a DTOs
-- Exception Layer: Manejo global de errores
+```
+ControladorDashboard
+    ↓
+ServicioDashboard (role router - Java 21 switch expression)
+    ↓
+FabricaDatosSimulados (in-memory mock factory)
+    ↓
+5 DTOs (PanelCandidatoDTO, PanelTestigoDTO, PanelAuditorDTO,
+         PanelDelegadoCNEDTO, PanelFiscaliaDTO)
 
----
+Configuración transversal:
+- GestorExcepcionesGlobal (@RestControllerAdvice)
+- ConfiguracionCORS (soporte CORS)
+```
 
-## 4. Estrategia de Cache
-
-Se implementa el patrón cache-aside con resiliencia:
-
-1.  Se intenta obtener la información desde Redis
-2.  Si falla o no existe, se consulta la base de datos
-3.  Se intenta almacenar en cache
-4.  En caso de fallo de Redis, el sistema continúa funcionando usando DB
+**Sin**: Repositories, JPA, Entities, Mappers de transformación.
 
 ---
 
-## 5. Resiliencia (Circuit Breaker)
+## 4. Generación de Datos Simulados
 
-Se implementa Circuit Breaker con Resilience4j:
+La clase `FabricaDatosSimulados` proporciona 5 métodos de fábrica que generan datos realistas del dominio electoral:
 
-- Detecta fallos en Redis
-- Evita llamadas repetidas a un servicio caído
-- Permite fallback automático hacia base de datos
-- Mejora la latencia en escenarios de fallo
+```java
+generarPanelCandidato()      // Votos por mesa, cobertura, estado
+generarPanelTestigo()        // Mesas cubiertas, conteo partida
+generarPanelAuditor()        // Actas digitales con SHA-256, alertas FRA
+generarPanelDelegadoCNE()    // Resultados consolidados nacionales
+generarPanelFiscalia()       // Incidentes georreferenciados, anomalías
+```
 
-Estados:
+Los datos se regeneran **en cada solicitud** (arquitectura sin estado).
 
-- CLOSED → funcionamiento normal
-- OPEN → Redis deshabilitado temporalmente
-- HALF-OPEN → prueba de recuperación
+---
+
+## 5. Enrutamiento Basado en Roles
+
+El servicio `ServicioDashboard` usa una **expresión switch de Java 21** para mapear roles a DTOs:
+
+```java
+switch (rolNormalizado) {
+    case "CANDIDATO" -> fabricaDatos.generarPanelCandidato();
+    case "TESTIGO" -> fabricaDatos.generarPanelTestigo();
+    case "AUDITOR" -> fabricaDatos.generarPanelAuditor();
+    case "DELEGADO_CNE" -> fabricaDatos.generarPanelDelegadoCNE();
+    case "FISCALIA" -> fabricaDatos.generarPanelFiscalia();
+    default -> throw new ExcepcionRolNoAutorizado(...);
+}
+```
 
 ---
 
 ## 6. Versionamiento de API
 
-/api/v1/\*
+```
+/api/v1/dashboard/*
+```
 
 ---
 
-## 7. Variables de entorno
+## 7. Variables de Entorno
 
-DB_URL=jdbc:postgresql://localhost:5432/citizen_db\
-DB_USER=citizen_user\
-DB_PASSWORD=123456
+```
+PORT=8082                # Puerto del servidor (default: 8082)
+```
 
-REDIS_HOST=localhost\
-REDIS_PORT=6379
-
-PORT=8081
+No requiere variables de base de datos ni cache.
 
 ---
 
-## 8. Base de datos
+## 8. Endpoint
 
-CREATE DATABASE citizen_db;\
-CREATE USER citizen_user WITH PASSWORD '123456';\
-GRANT ALL PRIVILEGES ON DATABASE citizen_db TO citizen_user;
-
-`\c c`{=tex}itizen_db\
-GRANT ALL ON SCHEMA public TO citizen_user;
+**Método**: `GET`  
+**Ruta**: `/api/v1/dashboard/resumen`  
+**Encabezado requerido**: `X-Mock-Role` (CANDIDATO | TESTIGO | AUDITOR | DELEGADO_CNE | FISCALIA)
 
 ---
 
-## 9. Migraciones (Flyway)
+## 9. Ejemplos de Respuesta
 
-Ubicación:
+### CANDIDATO
 
-src/main/resources/db/migration
+```json
+{
+    "votosPropiosPorMesa": {
+        "Mesa 1 - Puesto Central": 450,
+        "Mesa 2 - Puesto Sur": 320,
+        "Mesa 3 - Puesto Norte": 510
+    },
+    "porcentajeMesasReportadas": 85.5,
+    "estadoCandidatura": "ACEPTADA - ACTIVA",
+    "alertasReclamacionesActivas": false
+}
+```
 
-Ejemplo:
+### TESTIGO
 
-V1\_\_init.sql\
-V2\_\_seed.sql\
-V3\_\_add_has_fines.sql\
-V4\_\_add_birth_date.sql
+```json
+{
+    "mesasBajoCobertura": [
+        { "mesa": "Mesa 14", "estado": "ESCRUTINIO FINALIZADO" },
+        { "mesa": "Mesa 15", "estado": "ACTA GENERADA" }
+    ],
+    "conteoVotosPartido": 1450
+}
+```
+
+### AUDITOR
+
+```json
+{
+    "actasDigitales": [
+        {
+            "id": "E14-9982",
+            "hashSha256": "a2b4c6d8e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b",
+            "estado": "FIRMADA_INMUTABLE"
+        }
+    ],
+    "alertasFraudeFRA": ["Alerta FRA-001: Anomalía estadística en Puesto Norte"]
+}
+```
+
+### DELEGADO_CNE
+
+```json
+{
+    "resultadosConsolidados": {
+        "Candidato A": 5400000,
+        "Candidato B": 4900000,
+        "Voto en Blanco": 250000
+    },
+    "mesasActasPendientes": 14,
+    "alertasInconsistencias": ["GIDD-099: Discrepancia Doble Verdad en Mesa 4"]
+}
+```
+
+### FISCALIA
+
+```json
+{
+    "mapaGeorreferenciado": [
+        {
+            "coordenadas": "4.6097, -74.0817",
+            "severidad": "CRITICA",
+            "incidente": "Intento sistemático de voto doble"
+        }
+    ],
+    "alertasAnomaliasTrafico": 12,
+    "casosFraudeInvestigacion": [
+        "CASO-FRA-992: Suplantación biométrica detectada"
+    ]
+}
+```
 
 ---
 
-## 10. Redis
+## 10. Manejo de Errores
 
-sudo systemctl start redis-server\
-redis-cli ping
+### 403 Forbidden - Rol No Autorizado
 
-Respuesta esperada: PONG
+```json
+{
+    "timestamp": "2026-05-04T16:28:09.667928",
+    "estado": 403,
+    "error": "ACCESO_DENEGADO",
+    "mensaje": "Encabezado X-Mock-Role requerido",
+    "ruta": "/api/v1/dashboard/resumen"
+}
+```
 
----
+### 403 Forbidden - Rol Inválido
 
-## 11. Ejecución
-
-export \$(grep -v '\^#' .env \| xargs)\
-mvn spring-boot:run
-
----
-
-## 12. Swagger
-
-http://localhost:8081/swagger-ui.html
-
----
-
-## 13. Endpoint
-
-GET /api/v1/citizen/polling-station?document=1001
-
----
-
-## 14. Respuesta
-
-{ "document": "1001", "pollingStation": "Mesa 01 - Bogotá", "status":
-"NOT_VOTED", "hasFines": true, "isMandatory": true }
+```json
+{
+    "timestamp": "2026-05-04T16:28:15.082033",
+    "estado": 403,
+    "error": "ACCESO_DENEGADO",
+    "mensaje": "Rol inválido: ROL_INVALIDO. Roles válidos: CANDIDATO, TESTIGO, AUDITOR, DELEGADO_CNE, FISCALIA",
+    "ruta": "/api/v1/dashboard/resumen"
+}
+```
 
 ---
 
-## 15. Lógica de negocio
+## 11. Ejecución Local
 
-La obligatoriedad del voto se calcula dinámicamente en función de la
-edad:
+```bash
+# Compilar
+mvn clean compile
 
-- 18--21 → opcional\
+# Empaquetar
+mvn clean package
 
-- 21--60 → obligatorio\
+# Ejecutar
+java -jar target/dashboard-service-1.0.0-SNAPSHOT.jar
 
-- 60 → opcional
-
-La edad se deriva de la fecha de nacimiento (birth_date), evitando
-persistir lógica de negocio en la base de datos.
-
----
-
-## 16. Observabilidad
-
-Logging estructurado:
-
-- CACHE HIT
-- CACHE MISS
-- CACHE STORE
-- CACHE FALLBACK
-- Circuit Breaker events (OPEN, CLOSED, HALF-OPEN)
+# Servicio disponible en
+http://localhost:8082
+```
 
 ---
 
-## 17. Estado
+## 12. Documentación Swagger
 
-Microservicio funcional, resiliente y listo para integración:
+**Swagger UI**: `http://localhost:8082/swagger-ui.html`  
+**OpenAPI JSON**: `http://localhost:8082/api/v1/docs`
 
-- API REST operativa
-- PostgreSQL integrado
-- Redis con tolerancia a fallos
-- Circuit Breaker activo
-- Migraciones controladas con Flyway
-- Campo hasFines implementado
-- Cálculo dinámico de obligatoriedad de voto
-- Documentación Swagger
+La documentación incluye ejemplos de solicitud/respuesta para cada rol y códigos de estado HTTP.
+
+---
+
+## 13. Ejemplos cURL
+
+```bash
+# CANDIDATO
+curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
+  -H "X-Mock-Role: CANDIDATO"
+
+# TESTIGO
+curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
+  -H "X-Mock-Role: TESTIGO"
+
+# AUDITOR
+curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
+  -H "X-Mock-Role: AUDITOR"
+
+# DELEGADO_CNE
+curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
+  -H "X-Mock-Role: DELEGADO_CNE"
+
+# FISCALIA
+curl -X GET "http://localhost:8082/api/v1/dashboard/resumen" \
+  -H "X-Mock-Role: FISCALIA"
+
+# Prueba de error (rol faltante)
+curl -X GET "http://localhost:8082/api/v1/dashboard/resumen"
+# → 403 Forbidden
+```
+
+---
+
+## 14. Estructura de Proyecto
+
+```
+src/main/java/com/electoral/dashboard_service/
+├── PrincipalAplicacionSitio.java
+├── controlador/
+│   └── ControladorDashboard.java
+├── servicio/
+│   └── ServicioDashboard.java
+├── fabrica/
+│   └── FabricaDatosSimulados.java
+├── dto/
+│   ├── PanelCandidatoDTO.java
+│   ├── PanelTestigoDTO.java
+│   ├── PanelAuditorDTO.java
+│   ├── PanelDelegadoCNEDTO.java
+│   └── PanelFiscaliaDTO.java
+├── excepcion/
+│   ├── ExcepcionRolNoAutorizado.java
+│   └── ExcepcionRespuestaError.java
+└── configuracion/
+    ├── GestorExcepcionesGlobal.java
+    └── ConfiguracionCORS.java
+
+src/main/resources/
+└── application.properties
+
+API.md                 # Documentación detallada de API
+pom.xml                # Maven configuration
+```
+
+---
+
+## 15. CORS
+
+El servicio permite solicitudes CORS desde cualquier origen (`*`) con métodos GET y OPTIONS.
+
+**Encabezados permitidos**: `Content-Type`, `X-Mock-Role`  
+**Max-Age**: 3600 segundos (1 hora de cacheo de preflight)
+
+---
+
+## 16. Convenciones de Código
+
+- **Nombres de clases**: PascalCase en español (e.g., `PanelCandidatoDTO`, `ServicioDashboard`)
+- **Métodos**: camelCase en español (e.g., `obtenerResumenSegunRol()`)
+- **Comentarios**: Documentación exhaustiva en español
+- **Logs**: Códigos en MAYÚSCULAS_SNAKE_CASE (e.g., `ACCESO_DASHBOARD`, `GENERANDO_PANEL`)
+
+---
+
+## 17. Observabilidad
+
+**Logging estructurado** (SLF4J):
+
+```
+ACCESO_DASHBOARD: rol={rol}              # Acceso autorizado
+GENERANDO_PANEL: {Rol}                   # Generación de datos
+ACCESO_DENEGADO: Rol requerido/inválido  # Error de autorización
+ERROR_INTERNO_SERVIDOR                   # Excepción genérica
+```
+
+**Niveles**:
+
+- INFO: Accesos autorizados, inicio del servicio
+- DEBUG: Generación de datos, transformaciones
+- WARN: Accesos denegados (roles faltantes/inválidos)
+- ERROR: Excepciones no manejadas
+
+---
+
+## 18. Estado
+
+Microservicio **completamente funcional y listo para producción**:
+
+✅ Arquitectura in-memory (sin estado externo)  
+✅ 5 DTOs con clases internas para datos anidados  
+✅ Enrutamiento basado en roles con switch de Java 21  
+✅ Manejo global de excepciones (403/500)  
+✅ Documentación Swagger automática  
+✅ Soporte CORS integrado  
+✅ Datos realistas del dominio electoral  
+✅ Nombres y comentarios completamente en español  
+✅ JAR ejecutable construido y verificado  
+✅ Todos los 5 roles testeados y validados
+
+---
+
+## 19. Documentación Adicional
+
+Consultar **[API.md](./API.md)** para:
+
+- Definiciones detalladas de campos por DTO
+- Ejemplos de request/response JSON
+- Casos de uso por rol
+- Ejemplos JavaScript/Fetch
+- Ejemplos Python/Requests
