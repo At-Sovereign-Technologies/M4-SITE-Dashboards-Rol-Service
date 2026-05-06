@@ -10,14 +10,17 @@ COPY src ./src
 
 RUN mvn -B clean package -DskipTests
 
+# Runtime stage
 FROM eclipse-temurin:21-jre-alpine
+
 WORKDIR /app
 
 RUN addgroup -S spring && adduser -S spring -G spring
 
-COPY --from=builder /app/target/citizen-query-service-*.jar app.jar
+COPY --from=builder /app/target/*.jar app.jar
 
 USER spring:spring
-EXPOSE 8081
+
+EXPOSE 8085
 
 ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-Xms128m", "-Xmx2G", "-jar", "app.jar"]
