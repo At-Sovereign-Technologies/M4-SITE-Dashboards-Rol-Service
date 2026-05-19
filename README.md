@@ -372,3 +372,4 @@ Consultar **[API.md](./API.md)** para:
 - Casos de uso por rol
 - Ejemplos JavaScript/Fetch
 - Ejemplos Python/Requests
+# trigger CI build
